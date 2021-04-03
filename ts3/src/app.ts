@@ -1,40 +1,44 @@
-interface Named {
-  name: string;
+const names = ['vic', 'son'];
+
+
+const arr: Array<string> = [];
+
+/*
+const promise: Promise<string> = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve('this is done');
+  }, 2000)
+});
+*/
+
+
+function merge<T extends object, U extends object>(objA: T, objB: U) {
+  return Object.assign(objA, objB);
 }
 
-interface Greetable extends Named{
-  greet(phrase: string):void;
-};
+console.log(merge({name:'vic'}, {age: 10}));
+
+const mergeObj = merge({name:'vic'}, {age: 10});
 
 
-class Person implements Greetable{
-  name: string;
-  age: number;
-  constructor (n: string, a: number){
-    this.name = n;
-    this.age = a;
-  }
-
-  greet(phrase: string){
-    console.log(phrase);
-  }
+interface Lenghty {
+  length: number
 }
 
-let user1: Greetable;
-let user2: Greetable;
 
-user1 = {
-  name: "vic",
-  greet(phrase){
-    console.log(phrase);
+function countAndPrint<T extends Lenghty>(element: T){
+  let descriptionText = 'Got no value.';
+  if(element.length > 0){
+    descriptionText = 'Got ' + element.length;
   }
-};
+  return [element, descriptionText];
+}
 
-user2 = new Person("vic", 4);
+console.log(countAndPrint('hi there'))
 
-user1.greet("Hellooo");
-user2.greet("greetings from user 2");
-let personArr: Greetable[] = [];
 
-personArr.push(user1);
-personArr.push(user2);
+function extractAndConvert <T extends object, U extends keyof T> (obj: T, key: U){
+  return obj[key];
+}
+
+console.log(extractAndConvert({name: 'max'}, 'name'));
