@@ -21,7 +21,7 @@ interface Named {
 interface Greetable extends Named{
   greet(phrase: string):void;
 };
-
+/*
 class Person implements Greetable{
   name?: string;
   age: number;
@@ -58,3 +58,4 @@ let personArr: Greetable[] = [];
 
 personArr.push(user1);
 personArr.push(user2);
+*/
