@@ -16,6 +16,20 @@ function Autobind(_: any, _2: any, descriptor: PropertyDescriptor) {
   return adjDescriptor;
 };
 
+// Drag and Drop interface
+interface Draggable {
+  dragStartHandler(event: DragEvent): void;
+  dragEndHandler(event: DragEvent): void;
+}
+
+interface DragTarget {
+  dragOverHandler(event: DragEvent): void;
+  dropHandler(event: DragEvent): void;
+  dragLeaveHandler(event: DragEvent): void;
+}
+
+
+
 enum ProjectStatus { Active, Finished }
 
 // Project Type
@@ -70,10 +84,27 @@ class ProjectState extends State<Project> {
     );
 
     this.projects.push(newProject);
+   
+    this.updateListener();
+  }
+
+  moveProject(projectId: string, newStatus: ProjectStatus) {
+
+    const project = this.projects.find(prj => projectId === prj.id);
+
+    if (project) {
+      project.status = newStatus;
+    }
+    this.updateListener();
+  }
+
+  private updateListener(){
     for (const listenerFc of this.listeners) {
       listenerFc(this.projects.slice());
     }
   }
+
+
 }
 
 const projectState = ProjectState.getInstance();
@@ -142,7 +173,55 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement>{
 
 }
 
-class ProjectList extends Component<HTMLDivElement, HTMLElement> {
+
+class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> implements Draggable {
+
+  private project: Project;
+
+  constructor(hostId: string, project: Project) {
+    super('single-project', hostId, false, project.id);
+    this.project = project;
+
+    this.configure();
+    this.renderContent();
+
+  }
+
+  get persons() {
+    if (this.project.people === 1) {
+      return '1 person';
+    } else {
+      return `${this.project.people} persons`;
+    }
+  }
+
+  configure() {
+
+    this.element.addEventListener('dragstart', this.dragStartHandler);
+    this.element.addEventListener('dragend', this.dragEndHandler)
+  }
+  renderContent() {
+    this.element.querySelector('h2')!.textContent = this.project.title;
+    this.element.querySelector('h3')!.textContent = this.persons + " assigned";
+    this.element.querySelector('p')!.textContent = this.project.description;
+
+  }
+
+  @Autobind
+  dragStartHandler(event: DragEvent) {
+    event.dataTransfer!.setData('text/plain', this.project.id);
+    event.dataTransfer!.effectAllowed = 'move';
+  }
+
+  dragEndHandler(_: DragEvent) {
+    console.log('dragend')
+  }
+
+}
+
+
+
+class ProjectList extends Component<HTMLDivElement, HTMLElement> implements DragTarget {
   assignedProjects: Project[] = [];
 
   constructor(private type: 'active' | 'finished') {
@@ -158,9 +237,7 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
     listEl.innerHTML = '';
 
     for (const prjItem of this.assignedProjects) {
-      const listItem = document.createElement('li');
-      listItem.textContent = prjItem.title;
-      listEl.appendChild(listItem)
+      new ProjectItem(this.element.querySelector('ul')!.id, prjItem,);
     }
   }
 
@@ -172,6 +249,10 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
   }
 
   configure() {
+    this.element.addEventListener('dragover', this.dragOverHandler);
+    this.element.addEventListener('dragleave', this.dragLeaveHandler);
+    this.element.addEventListener('drop', this.dropHandler);
+
     projectState.addListener((projects: Project[]) => {
       const relevantProject = projects.filter(prj => {
         if (this.type === 'active') {
@@ -185,6 +266,29 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
     });
 
   }
+
+  @Autobind
+  dragOverHandler(event: DragEvent) {
+
+    if (event.dataTransfer && event.dataTransfer.types[0] === 'text/plain') {
+      event.preventDefault();
+      const listEl = this.element.querySelector('ul')!;
+      listEl.classList.add('droppable');
+    }
+  }
+
+  @Autobind
+  dragLeaveHandler(_: DragEvent) {
+    const listEl = this.element.querySelector('ul')!;
+    listEl.classList.remove('droppable');
+  }
+
+@Autobind
+  dropHandler(event: DragEvent) {
+    const prjId = event.dataTransfer!.getData('text/plain');
+    projectState.moveProject(prjId, this.type === 'active' ? ProjectStatus.Active : ProjectStatus.Finished);
+  }
+
 
 }
 
